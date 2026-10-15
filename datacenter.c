@@ -113,25 +113,39 @@ int datacenter_reserve(DataCenter *dc, Reservation *reservation) {
 }
 
 int datacenter_execute(DataCenter *dc, const char *reservation_id) {
-  if(!dc->configured){
-    fprintf(stderr, "Data Center needs to be configured!\n");
-    return 1;
-  }
+	if(!dc->configured){
+		fprintf(stderr, "Data Center needs to be configured!\n");
+		return 1;
+	}
 
-  Reservation *res = find_pending_reservation(dc, reservation_id);
-  if (!res) return 1;
+	Reservation *res = find_pending_reservation(dc, reservation_id);
+	if (!res) return 1;
 
-  if (spawn_all_vms(res) != 0) return 1;
+	for (size_t i = 0; i < res->num_vms; i++) {
+		VM *vm = res->vms[i];
+        char vm_path[MAX_PATH_SIZE];
 
-  res->state = RES_STATE_RUNNING;
+        if (prepare_vm_directory(res->id, vm->id, vm_path, sizeof(vm_path)) != 0) {
+            return 1;
+        }
+		
+		if (copy_directory(vm->type->input_folder, vm_path) != 0) {
+            return 1;
+        }
 
-  wait_for_all_vms(res);
+    }
 
-  res->state = RES_STATE_FINISHED;
+	if (spawn_all_vms(res) != 0) return 1;
 
-  reservation_destroy(dc, res);
+	res->state = RES_STATE_RUNNING;
 
-  return 0;
+	wait_for_all_vms(res);
+
+	res->state = RES_STATE_FINISHED;
+
+	reservation_destroy(dc, res);
+
+	return 0;
 }
 
 int datacenter_list(DataCenter *dc) {
