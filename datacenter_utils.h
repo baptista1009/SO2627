@@ -78,7 +78,9 @@ void reservation_destroy(DataCenter *dc, Reservation *reservation);
  *
  * @param vm Pointer to the VM being spawned.
  */
-void spawn_vm_child(VM *vm);
+void spawn_vm_child(VM *vm, const char *reservation_id,size_t num_servers);
+
+
 
 /**
  * Forks one child per VM in the reservation, calling spawn_vm_child()
@@ -89,15 +91,13 @@ void spawn_vm_child(VM *vm);
  * @return 0 on success.
  * @return 1 if any fork() call fails.
  */
-int spawn_all_vms(Reservation *res);
+int spawn_all_vms(Reservation *res, size_t num_servers);
 
-/**
- * Blocks until every VM's process has exited, updating each VM's state
- * to VM_STATE_TERMINATED as its pid is reaped.
- *
- * @param res Pointer to the Reservation whose VMs should be waited on.
+/*
+ * Waits for all remaining VM child processes during shutdown
+ * and releases their resources.
  */
-void wait_for_all_vms(Reservation *res);
+void wait_for_all_vms(DataCenter *dc);
 
 /**
  * Converts a VM state to a human-readable string. Used by datacenter_list().
@@ -117,5 +117,11 @@ const char *vm_state_to_string(VMState state);
  * @return Static, human-readable string describing the state.
  */
 const char *res_state_to_string(ReservationState state);
+
+/*
+ * Collects terminated child processes without blocking
+ * and releases the resources of the corresponding VMs.
+ */
+void reap_finished_vms(DataCenter *dc);
 
 #endif // DATACENTER_UTILS__H

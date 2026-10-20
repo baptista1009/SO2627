@@ -5,6 +5,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 void datacenter_init(DataCenter *dc) {
   dc->servers = NULL;
@@ -18,12 +19,15 @@ void datacenter_init(DataCenter *dc) {
 }
 
 void datacenter_destroy(DataCenter *dc) {
-  for (size_t i = 0; i < dc->num_servers; i++) {
-    for(size_t j = 0; j < dc->servers[i].num_hosted_vms; j++){
-      free(dc->servers[i].hosted_vms[j]);
+    wait_for_all_vms(dc);
+
+    for (size_t i = 0; i < dc->num_servers; i++) {
+        for (size_t j = 0; j < dc->servers[i].num_hosted_vms; j++) {
+            free(dc->servers[i].hosted_vms[j]);
+        }
     }
-  }
-  free(dc->servers);
+
+    free(dc->servers);
 }
 
 int datacenter_configure(DataCenter *dc, size_t num_servers, Resources *resources){
@@ -113,39 +117,37 @@ int datacenter_reserve(DataCenter *dc, Reservation *reservation) {
 }
 
 int datacenter_execute(DataCenter *dc, const char *reservation_id) {
-	if(!dc->configured){
-		fprintf(stderr, "Data Center needs to be configured!\n");
-		return 1;
-	}
+    if (!dc->configured) {
+        fprintf(stderr, "Data Center needs to be configured!\n");
+        return 1;
+    }
 
-	Reservation *res = find_pending_reservation(dc, reservation_id);
-	if (!res) return 1;
+    Reservation *res = find_pending_reservation(dc, reservation_id);
 
-	for (size_t i = 0; i < res->num_vms; i++) {
-		VM *vm = res->vms[i];
+    if (!res) {
+        return 1;
+    }
+
+    for (size_t i = 0; i < res->num_vms; i++) {
+        VM *vm = res->vms[i];
         char vm_path[MAX_PATH_SIZE];
 
         if (prepare_vm_directory(res->id, vm->id, vm_path, sizeof(vm_path)) != 0) {
             return 1;
         }
-		
-		if (copy_directory(vm->type->input_folder, vm_path) != 0) {
+
+        if (copy_directory(vm->type->input_folder, vm_path) != 0) {
             return 1;
         }
-
     }
 
-	if (spawn_all_vms(res) != 0) return 1;
+    if (spawn_all_vms(res, dc->num_servers) != 0) {
+        return 1;
+    }
 
-	res->state = RES_STATE_RUNNING;
+    res->state = RES_STATE_RUNNING;
 
-	wait_for_all_vms(res);
-
-	res->state = RES_STATE_FINISHED;
-
-	reservation_destroy(dc, res);
-
-	return 0;
+    return 0;
 }
 
 int datacenter_list(DataCenter *dc) {
@@ -246,7 +248,29 @@ int datacenter_list(DataCenter *dc) {
   return 0;
 }
 
-void datacenter_wait(unsigned int delay_ms){
-  struct timespec delay = (struct timespec){delay_ms / 1000, (delay_ms % 1000) * 1000000};
-  nanosleep(&delay, NULL);
+void datacenter_wait(DataCenter *dc, unsigned int delay_ms) {
+    reap_finished_vms(dc);
+
+    while (delay_ms > 0) {
+        unsigned int interval_ms = 10;
+
+        if (delay_ms < interval_ms) {
+            interval_ms = delay_ms;
+        }
+
+        struct timespec remaining = {
+            .tv_sec = 0,
+            .tv_nsec = (long)interval_ms * 1000000L
+        };
+
+        while (nanosleep(&remaining, &remaining) == -1) {
+            if (errno != EINTR) {
+                perror("Failed to pause command processing");
+                return;
+            }
+        }
+
+        delay_ms -= interval_ms;
+        reap_finished_vms(dc);
+    }
 }

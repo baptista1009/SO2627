@@ -5,17 +5,19 @@
 #include "commands.h"
 #include "parser.h"
 #include "constants.h"
+#include "datacenter_utils.h"
 
 
 static void process_commands(DataCenter *dc, int fd) {
     while (1) {
+        reap_finished_vms(dc);
+
         switch (get_next_command(fd)) {
             case CMD_DEFINE: {
                 VMType vmtype;
 
                 if (parse_define(fd, &vmtype) != 0) {
-                    fprintf(stderr,
-                            "Invalid define command. See H (help) for usage.\n");
+                    fprintf(stderr, "Invalid define command. See H (help) for usage.\n");
                     continue;
                 }
 
@@ -31,10 +33,14 @@ static void process_commands(DataCenter *dc, int fd) {
             case CMD_RESERVE: {
                 Reservation reservation = {0};
 
-                size_t num_items = parse_reserve(fd, &reservation, MAX_RESERVATIONS_ITEMS);
+                size_t num_items = parse_reserve(
+                    fd,
+                    &reservation,
+                    MAX_RESERVATIONS_ITEMS
+                );
 
                 if (num_items == 0) {
-                    fprintf(stderr,"Invalid reserve command. See H (help) for usage.\n");
+                    fprintf(stderr, "Invalid reserve command. See H (help) for usage.\n");
                     continue;
                 }
 
@@ -60,7 +66,7 @@ static void process_commands(DataCenter *dc, int fd) {
                     continue;
                 }
 
-                printf("Finished reservation execution!\n");
+                printf("Reservation execution started!\n");
                 break;
             }
 
@@ -81,7 +87,7 @@ static void process_commands(DataCenter *dc, int fd) {
                     continue;
                 }
 
-                datacenter_wait(delay);
+                datacenter_wait(dc, delay);
                 break;
             }
 
@@ -91,10 +97,13 @@ static void process_commands(DataCenter *dc, int fd) {
 
             case CMD_HELP:
                 printf(
-                    "Spaces between arguments are allowed, but not after command end.\n"
+                    "Spaces between arguments are allowed, "
+                    "but not after command end.\n"
                     "Available commands:\n"
-                    " D <VM_TYPE_ID> <INPUT_FOLDER> <EXECUTABLE_PATH> <RAM_NEEDED> <DISK_NEEDED> <VCPU_NEEDED_COUNT>\n"
-                    " R <RESERVATION_ID> [<VM_TYPE_ID> <COUNT> <SERVER_ID>]+\n"
+                    " D <VM_TYPE_ID> <INPUT_FOLDER> <EXECUTABLE_PATH> "
+                    "<RAM_NEEDED> <DISK_NEEDED> <VCPU_NEEDED_COUNT>\n"
+                    " R <RESERVATION_ID> "
+                    "[<VM_TYPE_ID> <COUNT> <SERVER_ID>]+\n"
                     " A <RESERVATION_ID>\n"
                     " L\n"
                     " E <DELAY_MS>\n"

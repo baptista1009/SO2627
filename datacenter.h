@@ -147,10 +147,11 @@ int datacenter_list(DataCenter *dc);
 int datacenter_execute(DataCenter *dc, const char *reservation_id);
 
 /**
- * Executes a delay command.
- * 
- * @param delay_ms Delay in ms.
+ * Pauses command processing while collecting terminated VMs.
+ *
+ * @param dc Pointer to the Data Center.
+ * @param delay_ms Delay in milliseconds.
  */
-void datacenter_wait(unsigned int delay_ms);
+void datacenter_wait(DataCenter *dc, unsigned int delay_ms);
 
 #endif // DATACENTER__H
