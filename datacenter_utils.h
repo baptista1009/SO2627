@@ -93,6 +93,9 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers);
  * Forks one child per VM in the reservation, calling spawn_vm_child()
  * in each child and recording the PID and VM state in the parent.
  *
+ * If fork() fails, waits for previously created children and resets
+ * their VMs to RESERVED with PID zero. The reservation keeps its resources.
+ *
  * @param res Pointer to the reservation whose VMs should be launched.
  * @param num_servers Number of physical servers in the Data Center.
  *

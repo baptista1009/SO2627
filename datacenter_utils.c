@@ -362,11 +362,27 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
 int spawn_all_vms(Reservation *res, size_t num_servers) {
     for (size_t i = 0; i < res->num_vms; i++) {
         VM *vm = res->vms[i];
-
         pid_t pid = fork();
 
         if (pid == -1) {
             perror("Failed to create VM process");
+
+            for (size_t j = 0; j < i; j++) {
+                VM *started_vm = res->vms[j];
+                pid_t result;
+
+                do {
+                    result = waitpid(started_vm->pid, NULL, 0);
+                } while (result == -1 && errno == EINTR);
+
+                if (result == -1) {
+                    perror("Failed to wait for VM process");
+                }
+
+                started_vm->pid = 0;
+                started_vm->state = VM_STATE_RESERVED;
+            }
+
             return 1;
         }
 
