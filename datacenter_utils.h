@@ -72,30 +72,40 @@ Reservation *find_pending_reservation(DataCenter *dc, const char *reservation_id
 void reservation_destroy(DataCenter *dc, Reservation *reservation);
 
 /**
- * Runs in the child process after fork(): sets resource limits (RAM,
- * disk) and execs the VM's workload under cpulimit. Never returns
- * (either execs successfully or calls exit(1) on failure).
+ * Runs in the child process after fork().
+ * Resolves the executable path, changes to the VM directory,
+ * sets memory and file size limits, and executes cpulimit
+ * to launch the VM application.
  *
- * @param vm Pointer to the VM being spawned.
+ * On success, exec replaces the current program and does not return.
+ * On failure, this function returns and the caller must terminate
+ * the child process.
+ *
+ * @param vm Pointer to the VM being launched.
+ * @param reservation_id ID of the reservation containing the VM.
+ * @param num_servers Number of physical servers in the Data Center.
  */
-void spawn_vm_child(VM *vm, const char *reservation_id,size_t num_servers);
+void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers);
 
 
 
 /**
  * Forks one child per VM in the reservation, calling spawn_vm_child()
- * in each child and recording the pid/state in the parent.
+ * in each child and recording the PID and VM state in the parent.
  *
- * @param res Pointer to the Reservation whose VMs should be spawned.
+ * @param res Pointer to the reservation whose VMs should be launched.
+ * @param num_servers Number of physical servers in the Data Center.
  *
- * @return 0 on success.
+ * @return 0 if all child processes were created successfully.
  * @return 1 if any fork() call fails.
  */
 int spawn_all_vms(Reservation *res, size_t num_servers);
 
-/*
- * Waits for all remaining VM child processes during shutdown
- * and releases their resources.
+/**
+ * Waits for all remaining VM child processes during shutdown,
+ * releases their resources, and removes completed reservations.
+ *
+ * @param dc Pointer to the Data Center containing the VMs.
  */
 void wait_for_all_vms(DataCenter *dc);
 
@@ -118,9 +128,11 @@ const char *vm_state_to_string(VMState state);
  */
 const char *res_state_to_string(ReservationState state);
 
-/*
- * Collects terminated child processes without blocking
- * and releases the resources of the corresponding VMs.
+/**
+ * Collects terminated VM child processes without blocking,
+ * releases their resources, and removes completed reservations.
+ *
+ * @param dc Pointer to the Data Center containing the VMs.
  */
 void reap_finished_vms(DataCenter *dc);
 

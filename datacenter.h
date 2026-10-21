@@ -16,9 +16,9 @@ typedef struct VMType{
 } VMType;
 
 typedef enum {
-  VM_STATE_RESERVED,   // placed on a Server, process not started yet (waiting for 'A' command)
-  VM_STATE_RUNNING,    // process launched (fork()/exec() called), `pid` is valid
-  VM_STATE_TERMINATED  // wait() called, process finished
+  VM_STATE_RESERVED,  // VM reserved; waiting for the 'A' command.
+  VM_STATE_RUNNING,   // Child process created; PID recorded.
+  VM_STATE_TERMINATED // Child process collected using waitpid().
 } VMState;
 
 typedef struct Server Server;
@@ -27,7 +27,7 @@ typedef struct VM {
   char id[MAX_VM_ID_STRING]; // VM id. eg: "R1_V1_1"
   VMType *type;   // VM type.
   Server *server; // Server where the VM is placed.
-  pid_t pid;      // PID of executable file.
+  pid_t pid; // PID of the child process running cpulimit; valid after launch.
   VMState state;  // State of the VM.
 } VM;
 
@@ -86,17 +86,20 @@ typedef struct DataCenter {
 void datacenter_init(DataCenter *dc);
 
 /**
- * Destroys a Data Center.
+ * Waits for all remaining VM child processes and frees
+ * the memory allocated by the Data Center.
  *
- * @param dc DatacCenter being destroyed.
+ * @param dc Pointer to the Data Center being destroyed.
  */
 void datacenter_destroy(DataCenter *dc);
 
 /**
- * Configures a given Data Center.
+ * Configures the Data Center with the specified number of physical
+ * servers, assigning the same resources to each server.
  *
- * @param dc Pointer to Datacenter being configured.
- * @param resources Pointer to resources of every PC on the Datacenter.
+ * @param dc Pointer to the Data Center being configured.
+ * @param num_pcs Number of physical servers.
+ * @param resources Pointer to the resources assigned to each server.
  *
  * @return 0 on success.
  * @return 1 on error.
@@ -136,12 +139,14 @@ int datacenter_reserve(DataCenter *dc, Reservation *reservation);
 int datacenter_list(DataCenter *dc);
 
 /**
- * Executes a reservation, launching the VMs.
+ * Prepares the VM directories, copies their input files,
+ * and launches the reservation's VMs in separate processes.
+ * Returns without waiting for the applications to finish.
  *
- * @param dc Pointer to a Data Center.
+ * @param dc Pointer to the Data Center.
  * @param reservation_id ID of the reservation to execute.
- * 
- * @return 0 on success.
+ *
+ * @return 0 if preparation and child process creation succeeded.
  * @return 1 on error.
  */
 int datacenter_execute(DataCenter *dc, const char *reservation_id);
