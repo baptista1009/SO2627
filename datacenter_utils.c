@@ -299,10 +299,11 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
 
     char vm_path[MAX_PATH_SIZE];
 
-    int length = snprintf(vm_path, sizeof(vm_path), "/tmp/CloudIST/%s/%s", reservation_id, vm->id);
+    if (prepare_vm_directory(reservation_id, vm->id, vm_path, sizeof(vm_path)) != 0) {
+        return;
+    }
 
-    if (length < 0 || (size_t)length >= sizeof(vm_path)) {
-        fprintf(stderr, "VM directory path is too long.\n");
+    if (copy_directory(vm->type->input_folder, vm_path) != 0) {
         return;
     }
 
@@ -314,6 +315,7 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
     const rlim_t bytes_per_gb = (rlim_t)1024 * 1024 * 1024;
 
     struct rlimit ram_limit;
+
     ram_limit.rlim_cur =
         (rlim_t)vm->type->required.ram * bytes_per_gb;
     ram_limit.rlim_max = ram_limit.rlim_cur;
@@ -324,6 +326,7 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
     }
 
     struct rlimit file_limit;
+
     file_limit.rlim_cur =
         (rlim_t)vm->type->required.disk * bytes_per_gb;
     file_limit.rlim_max = file_limit.rlim_cur;
@@ -337,7 +340,7 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
 
     char cpu_limit[32];
 
-    length = snprintf(cpu_limit, sizeof(cpu_limit), "%.0f", percentage);
+    int length = snprintf(cpu_limit, sizeof(cpu_limit), "%.0f", percentage);
 
     if (length < 0 || (size_t)length >= sizeof(cpu_limit)) {
         fprintf(stderr, "CPU limit value is too long.\n");

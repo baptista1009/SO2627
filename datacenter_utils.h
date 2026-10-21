@@ -73,11 +73,12 @@ void reservation_destroy(DataCenter *dc, Reservation *reservation);
 
 /**
  * Runs in the child process after fork().
- * Resolves the executable path, changes to the VM directory,
- * sets memory and file size limits, and executes cpulimit
+ * Resolves the executable path, creates the VM directory,
+ * recursively copies the inputs, and changes to that directory.
+ * Then sets memory and file size limits and executes cpulimit
  * to launch the VM application.
  *
- * On success, exec replaces the current program and does not return.
+ * On successful exec, the current program is replaced.
  * On failure, this function returns and the caller must terminate
  * the child process.
  *
@@ -86,7 +87,6 @@ void reservation_destroy(DataCenter *dc, Reservation *reservation);
  * @param num_servers Number of physical servers in the Data Center.
  */
 void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers);
-
 
 
 /**

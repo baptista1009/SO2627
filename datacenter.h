@@ -139,18 +139,17 @@ int datacenter_reserve(DataCenter *dc, Reservation *reservation);
 int datacenter_list(DataCenter *dc);
 
 /**
- * Prepares the VM directories, copies their input files,
- * and launches the reservation's VMs in separate processes.
- * Returns without waiting for the applications to finish.
+ * Launches one child process per VM in the reservation.
+ * Each child prepares its input directory before running the application.
+ * Returns without waiting for the children to finish.
  *
  * @param dc Pointer to the Data Center.
  * @param reservation_id ID of the reservation to execute.
  *
- * @return 0 if preparation and child process creation succeeded.
- * @return 1 on error.
+ * @return 0 if all child processes were created successfully.
+ * @return 1 if the reservation cannot be launched.
  */
 int datacenter_execute(DataCenter *dc, const char *reservation_id);
-
 /**
  * Pauses command processing while collecting terminated VMs.
  *

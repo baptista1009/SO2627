@@ -128,19 +128,6 @@ int datacenter_execute(DataCenter *dc, const char *reservation_id) {
         return 1;
     }
 
-    for (size_t i = 0; i < res->num_vms; i++) {
-        VM *vm = res->vms[i];
-        char vm_path[MAX_PATH_SIZE];
-
-        if (prepare_vm_directory(res->id, vm->id, vm_path, sizeof(vm_path)) != 0) {
-            return 1;
-        }
-
-        if (copy_directory(vm->type->input_folder, vm_path) != 0) {
-            return 1;
-        }
-    }
-
     if (spawn_all_vms(res, dc->num_servers) != 0) {
         return 1;
     }
