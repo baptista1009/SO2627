@@ -76,6 +76,8 @@ typedef struct DataCenter {
     size_t num_reservations;
 
 	int configured;		      // Wheter the datacenter is configured or not.
+
+    pthread_mutex_t lock;
 } DataCenter;
 
 /**

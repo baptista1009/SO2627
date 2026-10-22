@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <pthread.h>
 
 void datacenter_init(DataCenter *dc) {
   dc->servers = NULL;
@@ -16,6 +17,8 @@ void datacenter_init(DataCenter *dc) {
   dc->num_reservations = 0;
 
   dc->configured = 0;
+
+  pthread_mutex_init(&dc->lock, NULL);
 }
 
 void datacenter_destroy(DataCenter *dc) {
@@ -28,9 +31,13 @@ void datacenter_destroy(DataCenter *dc) {
     }
 
     free(dc->servers);
+    pthread_mutex_destroy(&dc->lock);
 }
 
 int datacenter_configure(DataCenter *dc, size_t num_servers, Resources *resources){
+
+  pthread_mutex_lock(&dc->lock);
+
   if(dc->configured){
     fprintf(stderr, "Data Center is already configured!\n");
     return 1;
@@ -58,10 +65,15 @@ int datacenter_configure(DataCenter *dc, size_t num_servers, Resources *resource
   dc->num_servers = num_servers;
   dc->configured = 1;
 
+  pthread_mutex_unlock(&dc->lock);
+
   return 0;
 }
 
 int datacenter_define_VM(DataCenter *dc, VMType *type){
+  
+  pthread_mutex_lock(&dc->lock);
+
   if (!dc->configured) {
     fprintf(stderr, "Data Center needs to be configured!\n");
     return 1;
@@ -89,10 +101,15 @@ int datacenter_define_VM(DataCenter *dc, VMType *type){
   
   dc->vm_types[dc->num_vm_types++] = *type;
 
+  pthread_mutex_unlock(&dc->lock);
+
   return 0;
 }
 
 int datacenter_reserve(DataCenter *dc, Reservation *reservation) {
+
+  pthread_mutex_lock(&dc->lock);
+
   if (!dc->configured) {
     fprintf(stderr, "Data Center needs to be configured!\n");
     return 1;
@@ -113,10 +130,15 @@ int datacenter_reserve(DataCenter *dc, Reservation *reservation) {
   dc->reservations[dc->num_reservations] = *reservation;
   dc->num_reservations++;
 
+  pthread_mutex_unlock(&dc->lock);
+
   return 0;
 }
 
 int datacenter_execute(DataCenter *dc, const char *reservation_id) {
+
+  pthread_mutex_lock(&dc->lock);
+
     if (!dc->configured) {
         fprintf(stderr, "Data Center needs to be configured!\n");
         return 1;
@@ -134,10 +156,15 @@ int datacenter_execute(DataCenter *dc, const char *reservation_id) {
 
     res->state = RES_STATE_RUNNING;
 
+    pthread_mutex_unlock(&dc->lock);
+
     return 0;
 }
 
 int datacenter_list(DataCenter *dc) {
+
+  pthread_mutex_lock(&dc->lock);
+
   if (!dc->configured) {
     fprintf(stderr, "Data Center needs to be configured!\n");
     return 1;
@@ -232,6 +259,9 @@ int datacenter_list(DataCenter *dc) {
   }
 
   printf("================================================================--------------------------\n\n");
+
+  pthread_mutex_unlock(&dc->lock);
+
   return 0;
 }
 
