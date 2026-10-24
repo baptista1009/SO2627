@@ -62,7 +62,7 @@ int list_config_files(const char *dir_path, ConfigFileList *list);
 void free_config_files(ConfigFileList *list);
 
 /**
- * Ensures that /tmp/CloudIST, the reservation directory,
+ * Ensures that /tmp/CloudIST-114851, the reservation directory,
  * and the VM directory exist.
  * Stores the full VM directory path in buffer.
  *
