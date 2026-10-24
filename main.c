@@ -7,6 +7,8 @@
 #include "commands.h"
 #include "filesystem.h"
 
+size_t g_local_cores = 1;
+
 typedef struct {
 	DataCenter *dc;
 	ConfigFileList *files;
@@ -45,8 +47,8 @@ int main(int argc, char **argv){
 	DataCenter dc;
 	datacenter_init(&dc);
 
-if (argc != 7) {
-    fprintf(stderr, "Usage: %s <servers> <ram> <disk> <cpus> <INPUT_DIR> <MAX_THREADS>\n", argv[0]);
+    if (argc != 7 && argc != 8) {
+		fprintf(stderr, "Usage: %s <servers> <ram> <disk> <cpus> <local_cores> <INPUT_DIR> [<MAX_THREADS>]\n", argv[0]);
     return 1;
 }
 
@@ -54,16 +56,21 @@ if (argc != 7) {
 	size_t ram;
 	size_t disk;
 	double cpu;
-	size_t max_threads;
+    size_t local_cores;
+	size_t max_threads = 1;
 
 	if (parse_size_t_arg(argv[1], &servers) != 0 ||
 			parse_size_t_arg(argv[2], &ram) != 0 ||
 			parse_size_t_arg(argv[3], &disk) != 0 ||
 			parse_double_arg(argv[4], &cpu) != 0 ||
-			parse_size_t_arg(argv[6], &max_threads) != 0) {
+			parse_size_t_arg(argv[5], &local_cores) != 0 ||
+			local_cores == 0 ||
+			(argc == 8 && parse_size_t_arg(argv[7], &max_threads) != 0)) {
 		fprintf(stderr, "Invalid command line arguments.\n");
 		return 1;
 	}
+ 
+	g_local_cores = local_cores;
 
 	Resources resources = {
     .ram = ram,
@@ -79,7 +86,7 @@ if (argc != 7) {
 
  	ConfigFileList files = {0};
 
-    if (list_config_files(argv[5], &files) != 0) {
+    if (list_config_files(argv[6], &files) != 0) {
         datacenter_destroy(&dc);
         return 1;
     }
