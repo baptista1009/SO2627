@@ -149,13 +149,13 @@ static int ensure_directory(const char *path) {
 }
 
 int prepare_vm_directory(const char *reservation_id, const char *vm_id,  char *buffer, size_t size) {
-    if (ensure_directory("/tmp/CloudIST") != 0) {
+    if (ensure_directory(CLOUDIST_BASE) != 0) {
         return 1;
     }
 
     char reservation_path[MAX_PATH_SIZE];
 
-    int length = snprintf(reservation_path, sizeof(reservation_path), "/tmp/CloudIST/%s", reservation_id);
+    int length = snprintf(reservation_path, sizeof(reservation_path), CLOUDIST_BASE "/%s", reservation_id);
 
     if (length < 0 || (size_t)length >= sizeof(reservation_path)) {
         fprintf(stderr, "Reservation directory path is too long.\n");

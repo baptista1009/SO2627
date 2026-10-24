@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <math.h>
 
+extern size_t g_local_cores;   /* definido no main.c: cores locais reservados ao CloudIST */
+
 VMType *VMType_exists(DataCenter *dc, const char* type_id){
 	for(size_t i = 0; i < dc->num_vm_types; i++){
 		if(strncmp(type_id, dc->vm_types[i].id, MAX_STRING_SIZE) == 0){
@@ -336,7 +338,8 @@ void spawn_vm_child(VM *vm, const char *reservation_id, size_t num_servers) {
         return;
     }
 
-    double percentage = ceil(vm->type->required.cpu / vm->server->total.cpu * (double)num_servers * 100.0);
+    double percentage = ceil(100.0 * vm->type->required.cpu * (double)g_local_cores /
+                         (vm->server->total.cpu * (double)num_servers));
 
     char cpu_limit[32];
 
